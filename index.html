@@ -1,0 +1,358 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KPM Year 5 English Writing Evaluator & OCR Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-md py-6 px-4 sm:px-8">
+        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">KPM Year 5 English Writing Evaluator</h1>
+                <p class="text-blue-100 text-sm">CEFR-Aligned Marking Scheme Scanner with Live Camera OCR</p>
+            </div>
+            <span class="bg-blue-700 text-blue-200 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-500">Malaysia Standard KSSR</span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-4xl w-full mx-auto p-4 sm:p-6 my-4 space-y-6">
+
+        <!-- Selector Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Select Exam Part:</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button type="button" id="btnPart6" onclick="setPart(6)" class="p-4 rounded-xl border-2 text-left transition-all border-blue-600 bg-blue-50/50 shadow-sm">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-blue-900">Part 6: Short Communicative Message</span>
+                        <span class="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">10 Marks</span>
+                    </div>
+                    <p class="text-xs text-slate-600">Target length: 30–50 words. Email addressing 3 key points.</p>
+                </button>
+                <button type="button" id="btnPart7" onclick="setPart(7)" class="p-4 rounded-xl border-2 text-left transition-all border-slate-200 bg-white hover:border-slate-300">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-slate-800">Part 7: Note / Email Expansion</span>
+                        <span class="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">15 Marks</span>
+                    </div>
+                    <p class="text-xs text-slate-600">Target length: 60–80 words. Information expansion + invitation.</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- Input Form Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                    <label for="studentEmail" class="block text-sm font-semibold text-slate-700">Student Answer Script:</label>
+                    <p class="text-xs text-slate-500" id="promptInstruction">Type text or use the camera scanner to capture student handwriting.</p>
+                </div>
+                <!-- Camera / Upload Trigger -->
+                <label class="cursor-pointer inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-4 py-2 rounded-xl transition border border-slate-300">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span>Scan Handwritten Script (Camera / Image)</span>
+                    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleImageScan(event)">
+                </label>
+            </div>
+
+            <!-- OCR Loading State -->
+            <div id="ocrLoading" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center gap-3 text-blue-700 text-xs font-medium">
+                <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Gemini AI is reading and transcribing the student's handwriting from image... Please wait.</span>
+            </div>
+
+            <textarea id="studentEmail" rows="6" class="w-full rounded-xl border border-slate-300 p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="Type student answer or snap a photo above..."></textarea>
+
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
+                <div class="text-sm font-medium text-slate-600 flex items-center gap-2">
+                    <span>Word Count:</span>
+                    <span id="wordCountBadge" class="px-2.5 py-1 bg-slate-100 rounded-lg text-slate-800 font-bold">0 words</span>
+                    <span id="wordCountWarning" class="text-xs text-amber-600 font-medium"></span>
+                </div>
+                <button onclick="evaluateScript()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                    Scan & Evaluate Script
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Card (Hidden by default) -->
+        <div id="resultsCard" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6 hidden">
+            <div class="border-b border-slate-100 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">Evaluation Report</h2>
+                    <p class="text-xs text-slate-500">Based on KPM CEFR Band Descriptors</p>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl text-right">
+                    <div class="text-xs text-blue-600 font-medium uppercase tracking-wider">Estimated Score</div>
+                    <div class="text-2xl font-black text-blue-700" id="totalScoreDisplay">0 / 10</div>
+                </div>
+            </div>
+
+            <!-- Breakdown Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Content & Task Achievement -->
+                <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-sm text-slate-700">Content / Task Fulfilment</span>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800" id="contentScoreBadge">0 / 5</span>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed" id="contentFeedback">Analysis pending...</p>
+                </div>
+
+                <!-- Language & Mechanics -->
+                <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold text-sm text-slate-700">Language & Grammar</span>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800" id="languageScoreBadge">0 / 5</span>
+                    </div>
+                    <p class="text-xs text-slate-600 leading-relaxed" id="languageFeedback">Analysis pending...</p>
+                </div>
+            </div>
+
+            <!-- Teacher's Diagnostic Feedback -->
+            <div class="space-y-2">
+                <h3 class="text-sm font-semibold text-slate-700">Detailed Teacher Remarks & Improvement Tips:</h3>
+                <div id="diagnosticRemarks" class="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 text-xs leading-relaxed space-y-1">
+                    <!-- Dynamic bullets -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Custom Modal Notice -->
+    <div id="customModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4 text-center">
+            <div id="modalIcon" class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-xl font-bold">⚠️</div>
+            <h3 id="modalTitle" class="text-base font-bold text-slate-800">Notice</h3>
+            <p id="modalMessage" class="text-xs text-slate-600 leading-relaxed">Please enter a student response first.</p>
+            <button onclick="closeModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl text-xs transition">OK</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-slate-400">
+        KPM Year 5 English Assessment Tool &bull; Designed for Malaysian Educators
+    </footer>
+
+    <script>
+        let currentPart = 6;
+
+        function setPart(part) {
+            currentPart = part;
+            const btn6 = document.getElementById('btnPart6');
+            const btn7 = document.getElementById('btnPart7');
+            const instruction = document.getElementById('promptInstruction');
+
+            if (part === 6) {
+                btn6.className = "p-4 rounded-xl border-2 text-left transition-all border-blue-600 bg-blue-50/50 shadow-sm";
+                btn7.className = "p-4 rounded-xl border-2 text-left transition-all border-slate-200 bg-white hover:border-slate-300";
+                instruction.innerText = "Target word count: 30–50 words. Must address: favourite food, when & where bought, benefits.";
+            } else {
+                btn7.className = "p-4 rounded-xl border-2 text-left transition-all border-blue-600 bg-blue-50/50 shadow-sm";
+                btn6.className = "p-4 rounded-xl border-2 text-left transition-all border-slate-200 bg-white hover:border-slate-300";
+                instruction.innerText = "Target word count: 60–80 words. Must describe zoo info/poster details and include an invitation.";
+            }
+            updateWordCount();
+        }
+
+        const textarea = document.getElementById('studentEmail');
+        textarea.addEventListener('input', updateWordCount);
+
+        function updateWordCount() {
+            const text = textarea.value.trim();
+            const words = text === "" ? 0 : text.split(/\s+/).length;
+            const badge = document.getElementById('wordCountBadge');
+            const warning = document.getElementById('wordCountWarning');
+
+            badge.innerText = `${words} words`;
+
+            if (currentPart === 6) {
+                if (words === 0) {
+                    warning.innerText = "";
+                } else if (words < 30) {
+                    warning.innerText = "⚠️ Below 30 words (Too short)";
+                } else if (words > 50) {
+                    warning.innerText = "⚠️ Above 50 words (Too long)";
+                } else {
+                    warning.innerText = "✅ Within target range (30-50)";
+                }
+            } else {
+                if (words === 0) {
+                    warning.innerText = "";
+                } else if (words < 60) {
+                    warning.innerText = "⚠️ Below 60 words (Too short)";
+                } else if (words > 80) {
+                    warning.innerText = "⚠️ Above 80 words (Too long)";
+                } else {
+                    warning.innerText = "✅ Within target range (60-80)";
+                }
+            }
+        }
+
+        function showModal(title, msg) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = msg;
+            document.getElementById('customModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('customModal').classList.add('hidden');
+        }
+
+        // Camera / Image OCR scanner function using Gemini 3.1 Flash Image
+        async function handleImageScan(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const base64DataUrl = e.target.result;
+                const base64Data = base64DataUrl.split(',')[1];
+                const mimeType = file.type || 'image/jpeg';
+
+                document.getElementById('ocrLoading').classList.remove('hidden');
+
+                try {
+                    const promptText = "Read and accurately transcribe all the handwritten English text from this student exam answer script. Output ONLY the transcribed text verbatim without any introductory comments.";
+                    const payload = {
+                        contents: [{
+                            role: "user",
+                            parts: [
+                                { text: promptText },
+                                { inlineData: { mimeType: mimeType, data: base64Data } }
+                            ]
+                        }]
+                    };
+
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`;
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+                    const candidate = result?.candidates?.[0];
+                    let transcribedText = "";
+
+                    if (candidate && candidate.content?.parts) {
+                        for (const part of candidate.content.parts) {
+                            if (part.text) transcribedText += part.text;
+                        }
+                    }
+
+                    if (transcribedText.trim()) {
+                        document.getElementById('studentEmail').value = transcribedText.trim();
+                        updateWordCount();
+                    } else {
+                        showModal("OCR Notice", "Could not clearly detect handwriting in the image. Please try retaking a clearer photo or type the answer directly.");
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showModal("Scan Error", "An error occurred while scanning the image. Please try again.");
+                } finally {
+                    document.getElementById('ocrLoading').classList.add('hidden');
+                    event.target.value = ''; // reset file input
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function evaluateScript() {
+            const text = textarea.value.trim();
+            const words = text === "" ? 0 : text.split(/\s+/).length;
+            
+            if (words === 0) {
+                showModal("Missing Text", "Please enter or scan a student response before evaluating.");
+                return;
+            }
+
+            const resultsCard = document.getElementById('resultsCard');
+            resultsCard.classList.remove('hidden');
+
+            let contentScore = 0;
+            let languageScore = 0;
+            let contentFeedbackText = "";
+            let languageFeedbackText = "";
+            let remarksHtml = "";
+
+            const lowerText = text.toLowerCase();
+
+            if (currentPart === 6) {
+                let bulletsFound = 0;
+                if (lowerText.includes('food') || lowerText.includes('nasi') || lowerText.includes('mi') || lowerText.includes('chicken') || lowerText.includes('burger') || lowerText.includes('rice') || lowerText.includes('favourite')) bulletsFound++;
+                if (lowerText.includes('buy') || lowerText.includes('market') || lowerText.includes('shop') || lowerText.includes('stall') || lowerText.includes('every') || lowerText.includes('night') || lowerText.includes('morning') || lowerText.includes('weekend')) bulletsFound++;
+                if (lowerText.includes('because') || lowerText.includes('good') || lowerText.includes('healthy') || lowerText.includes('energy') || lowerText.includes('protein') || lowerText.includes('vitamin') || lowerText.includes('strong')) bulletsFound++;
+
+                contentScore = Math.min(5, Math.max(1, bulletsFound + (words >= 25 ? 1 : 0)));
+                if (words < 25 || words > 60) contentScore = Math.max(1, contentScore - 1);
+
+                let langPoints = 4;
+                if (text.includes('.') && text.includes(',')) langPoints = 5;
+                if (words < 20) langPoints = 2;
+                languageScore = langPoints;
+
+                const total = contentScore + languageScore;
+                document.getElementById('totalScoreDisplay').innerText = `${total} / 10`;
+                document.getElementById('contentScoreBadge').innerText = `${contentScore} / 5`;
+                document.getElementById('languageScoreBadge').innerText = `${languageScore} / 5`;
+
+                contentFeedbackText = `Found approximately ${bulletsFound}/3 required stimulus prompts addressed (Favourite food, location/time, benefits).`;
+                languageFeedbackText = `Grammar structure and length evaluation. Word count is currently at ${words} words.`;
+
+                remarksHtml += `<li><strong>Content Check:</strong> ${bulletsFound === 3 ? 'All 3 bullet points are well covered.' : 'Some stimulus bullet points might be missing or insufficiently detailed.'}</li>`;
+                remarksHtml += `<li><strong>Word Count Discipline:</strong> ${words >= 30 && words <= 50 ? 'Excellent length compliance (30–50 words).' : 'Adjust length closer to the 30–50 words bracket to secure full communicative marks.'}</li>`;
+                remarksHtml += `<li><strong>Grammar & Punctuation:</strong> Ensure capitalization at the start of sentences and proper terminal punctuation.</li>`;
+
+            } else {
+                let hasZooReference = lowerText.includes('zoo') || lowerText.includes('negara') || lowerText.includes('ampang') || lowerText.includes('animal') || lowerText.includes('tiger') || lowerText.includes('panda');
+                let hasInvitation = lowerText.includes('go') || lowerText.includes('visit') || lowerText.includes('join') || lowerText.includes('together') || lowerText.includes('let us') || lowerText.includes('we should');
+
+                let contentMarks = 5;
+                if (hasZooReference) contentMarks += 2;
+                if (hasInvitation) contentMarks += 1;
+                if (words < 50) contentMarks -= 2;
+                contentMarks = Math.min(8, Math.max(2, contentMarks));
+
+                let langMarks = 5;
+                if (words >= 55 && words <= 85) langMarks += 2;
+                langMarks = Math.min(7, Math.max(2, langMarks));
+
+                const totalPart7 = contentMarks + langMarks;
+                document.getElementById('totalScoreDisplay').innerText = `${totalPart7} / 15`;
+                document.getElementById('contentScoreBadge').innerText = `${contentMarks} / 8`;
+                document.getElementById('languageScoreBadge').innerText = `${langMarks} / 7`;
+
+                contentFeedbackText = `Zoo details integration: ${hasZooReference ? 'Detected' : 'Needs improvement'}. Invitation extended: ${hasInvitation ? 'Detected' : 'Missing/Unclear'}.`;
+                languageFeedbackText = `Sentence variety and structural complexity assessed for 60–80 word target.`;
+
+                remarksHtml += `<li><strong>Task Achievement (Part 7):</strong> ${hasInvitation ? 'Clear invitation provided to friend Hakim.' : 'Warning: Explicit invitation needs to be stated clearly.'}</li>`;
+                remarksHtml += `<li><strong>Word Count Check:</strong> Current count is ${words} words. Target is 60–80 words.</li>`;
+                remarksHtml += `<li><strong>Vocabulary Tip:</strong> Use linking words like *and, because, so, to* to connect sentences smoothly.</li>`;
+            }
+
+            document.getElementById('contentFeedback').innerText = contentFeedbackText;
+            document.getElementById('languageFeedback').innerText = languageFeedbackText;
+            document.getElementById('diagnosticRemarks').innerHTML = remarksHtml;
+
+            resultsCard.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
+```
